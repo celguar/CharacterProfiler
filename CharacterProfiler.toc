@@ -1,4 +1,4 @@
-## Interface: 11100
+## Interface: 11200
 ## Title: rpgo-CharacterProfiler v1.5.4a
 ## Author: calvin :: RPG Outfitter
 ## eMail: calvin@rpgoutfitter.com
