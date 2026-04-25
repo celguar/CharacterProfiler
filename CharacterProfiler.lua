@@ -373,6 +373,9 @@ function rpgoCP_Show()
 					if(myProfile[rpgoCPserver][rpgoCPplayer]["SubZone"] and myProfile[rpgoCPserver][rpgoCPplayer]["SubZone"]~="") then
 						msg=msg.."/"..myProfile[rpgoCPserver][rpgoCPplayer]["SubZone"];
 					end
+					if(myProfile[rpgoCPserver][rpgoCPplayer]["coordX"] and myProfile[rpgoCPserver][rpgoCPplayer]["coordY"]) then
+						msg=msg.."/ Coords:"..myProfile[rpgoCPserver][rpgoCPplayer]["coordX"]..":"..myProfile[rpgoCPserver][rpgoCPplayer]["coordY"];
+					end
 				else
 					msg=msg..rpgo_ColorizeMsg(rpgoColorRed," not scanned");
 				end
@@ -1708,6 +1711,9 @@ end
 function rpgoCP_UpdateZone()
 	myProfile[rpgoCPserver][rpgoCPplayer]["Zone"]=GetZoneText();
 	myProfile[rpgoCPserver][rpgoCPplayer]["SubZone"]=GetSubZoneText();
+	local px, py = GetPlayerMapPosition("player");
+	myProfile[rpgoCPserver][rpgoCPplayer]["coordX"] = px * 100;
+	myProfile[rpgoCPserver][rpgoCPplayer]["coordY"] = py * 100;
 end
 
 function rpgoCP_UpdateBagScan(arg1)
