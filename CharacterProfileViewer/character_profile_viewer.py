@@ -106,7 +106,7 @@ def generate_dashboard(myProfile, output_filename):
         }
         .item-container:hover .tooltip-box { display: block; }
         
-        .bar-container { display: flex; flex-direction: column; gap: 4px; min-width: 240px; }
+        .bar-container { display: flex; flex-direction: column; gap: 4px; width: 50%; }
         .bar-bg { background: #111; height: 14px; border-radius: 2px; overflow: hidden; border: 1px solid #333; }
         .bar-fill { height: 100%; width: 100%; } 
         
