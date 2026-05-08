@@ -191,6 +191,19 @@ def generate_dashboard(myProfile, output_filename):
             return regex.test(str);
         }
 
+        function renderProgressBar(label, text, percent, color) {
+            return `
+            <div class="quest-obj-progress" style="margin-bottom: 8px; width: 50%;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 2px;">
+                    <span>${label}</span>
+                    <b style="color: ${color};">${text}</b>
+                </div>
+                <div class="bar-bg" style="background: rgba(0,0,0,0.3); height: 6px; border-radius: 3px; overflow: hidden; border: 1px solid #333;">
+                    <div class="bar-fill" style="width: ${percent}% !important; background: ${color}; height: 100%;"></div>
+                </div>
+            </div>`;
+        }
+
         function buildRow(key, val, sectionName) {
             if (key === "Order" || key === "Count" || key === "Texture" || key === "Background" || key === "CoinIcon") return '';
             let content = '';
@@ -280,15 +293,31 @@ def generate_dashboard(myProfile, output_filename):
                         
                         Object.values(val.Tasks).forEach(task => {
                             const progressMatch = task.Note.match(/(.+):\s*(\d+)\s*\/\s*(\d+)/);
-                            const itemName = progressMatch[1];
-                            const current = parseInt(progressMatch[2]);
-                            const max = parseInt(progressMatch[3]);
-                            const percent = Math.min(100, (current / max) * 100);
-                            rewardsHtml += `
-                                <div class="item-container" style="margin-bottom:2px; background: rgba(0,0,0,0.2);">
-                                    <span ${percent >= 100 ? 'style="font-weight:bold;"' : 'style="color:grey"'}) font-size:0.9em;">${task.Note}</span>
-                                </div>`;
-                                console.log(progressMatch); // Output: true
+                            const statusMatch = !progressMatch ? task.Note.match(/(.+):\s*([a-zA-Zа-яА-ЯёЁ\s]+)\s*\/\s*([a-zA-Zа-яА-ЯёЁ\s]+)/) : null;
+
+                            if (progressMatch) {
+                                const itemName = progressMatch[1];
+                                const current = parseInt(progressMatch[2]);
+                                const max = parseInt(progressMatch[3]);
+                                const percent = Math.min(100, (current / max) * 100);
+                                const barColor = current >= max ? '#17dc00' : '#ffb400';
+
+                                rewardsHtml += renderProgressBar(itemName, `${current} / ${max}`, percent, barColor);
+
+                            } else if (statusMatch) {
+                                const itemName = statusMatch[1];
+                                const currentStatus = statusMatch[2].trim();
+                                const targetStatus = statusMatch[3].trim();
+                                
+                                const isDone = currentStatus.toLowerCase() === targetStatus.toLowerCase();
+                                const percent = isDone ? 100 : 50; // Можно поставить 50% если еще в процессе
+                                const barColor = isDone ? '#17dc00' : '#4a90e2'; // Синий для процесса репутации
+
+                                rewardsHtml += renderProgressBar(itemName, `${currentStatus} / ${targetStatus}`, percent, barColor);
+
+                            } else {
+                                rewardsHtml += `<p style="font-size: 0.9em; margin: 2px 0; color: #ccc;">• ${obj}</p>`;
+                            }
                         });
                         rewardsHtml += '</div>';
                     }
