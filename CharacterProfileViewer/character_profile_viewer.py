@@ -141,7 +141,7 @@ def generate_dashboard(myProfile, output_filename):
         const profileData = DATA_PLACEHOLDER;
         const iconBase = 'ICON_PATH_PLACEHOLDER';
 
-        const slotOrder = ["head", "neck", "shoulder", "shirt", "chest", "waist", "legs", "feet", "wrist", "hands", "finger0", "finger1", "trinket0", "trinket1", "back", "main_hand", "off_hand", "relic", "tabard"];
+        const slotOrder = ["head", "neck", "shoulder", "shirt", "chest", "waist", "legs", "feet", "wrist", "hands", "finger0", "finger1", "trinket0", "trinket1", "back", "tabard", "mainhand", "offhand", "relic", "ranged"];
         const repColors = { "Exalted": "#08ffff", "Revered": "#05ffc1", "Honored": "#00ff88", "Friendly": "#17dc00", "Neutral": "#f1ff04", "Unfriendly": "#ee5121", "Hostile": "#c30400", "Hated": "#cc2121" };
 
         function getLocalIcon(texturePath, name="") {
