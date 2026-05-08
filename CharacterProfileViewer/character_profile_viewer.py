@@ -365,7 +365,7 @@ def generate_dashboard(myProfile, output_filename):
                 }
                 // content = '<details><summary>' + key + '</summary>' + buildTable(val, key) + '</details>';
             }
-            else if (val && typeof val === 'string' && val.includes(':') && (sectionName === "Class Skills" || sectionName === "Secondary Skills" || sectionName === "Weapon Skills" || sectionName === "Armor Proficiencies" || sectionName === "Languages")) {
+            else if (val && typeof val === 'string' && val.includes(':') && (sectionName === "Professions" || sectionName === "Class Skills" || sectionName === "Secondary Skills" || sectionName === "Weapon Skills" || sectionName === "Armor Proficiencies" || sectionName === "Languages")) {
                 const parts = val.split(':');
                 const current = parseInt(parts[0]);
                 const max = parseInt(parts[1]);
