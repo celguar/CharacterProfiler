@@ -205,6 +205,25 @@ def generate_dashboard(myProfile, output_filename):
             </div>`;
         }
 
+        function formatWoWText(text) {
+            if (!text) return "";
+
+            let formatted = text;
+
+            formatted = formatted.replace(/\\n/g, '<br/>').replace(/<br>/g, '<br/>');
+
+            formatted = formatted.replace(/\|c[a-fA-F0-9]{2}([a-fA-F0-9]{6})(.*?)\|r/g, (match, hex, content) => {
+                // ВАЖНО: Экранируем скобки < > внутри текста, чтобы они не стали тегами
+                let safeContent = content
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                    
+                return `<span style="color: #${hex};">${safeContent}</span>`;
+            });
+
+            return formatted;
+        }
+
         function buildRow(key, val, sectionName) {
             if (key === "Order" || key === "Count" || key === "Texture" || key === "Background" || key === "CoinIcon") return '';
             let content = '';
@@ -244,6 +263,8 @@ def generate_dashboard(myProfile, output_filename):
                 rawTip = rawTip.replace(replaceString, '');
                 replaceString = key+'<br/>';
                 rawTip = rawTip.replace(replaceString, '');
+
+                rawTip = formatWoWText(rawTip);
                 
                 content = `<div class="item-container"><div class="icon-wrapper"><img src="${iconPath}" class="icon-img" onerror="this.style.opacity='0.2'">${quantity > 1 ? `<span class="item-quantity">${quantity}</span>` : ''}</div><div><span style="color:${hexColor}; font-weight:bold;">${val.Name || key} ${val.Rank || ''}</span><div class="tooltip-box" style="border-color:${hexColor}"><b style="color:${hexColor}">${val.Name || key}</b><br/>${rawTip}</div></div></div>`;
                 
