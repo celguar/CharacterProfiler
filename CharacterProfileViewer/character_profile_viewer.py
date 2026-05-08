@@ -146,6 +146,7 @@ def generate_dashboard(myProfile, output_filename):
 
         function getLocalIcon(texturePath, name="") {
             if (name === "Backpack") return iconBase + "inv_misc_bag_08.png";
+            if (name == "Keyring") return iconBase + "inv_misc_key_12.png";
             if (!texturePath) return '';
             const filename = texturePath.split(/[\\\\\\/]/).pop().toLowerCase();
             return iconBase + filename + '.png';
