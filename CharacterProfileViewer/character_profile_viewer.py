@@ -49,7 +49,8 @@ def process_files():
                 continue
                 
             data_string = content.split('myProfile =')[1].strip()
-            data_string = data_string.split(';')[0] 
+            if data_string.endswith(';'):
+                data_string = data_string[:-1].strip()
 
             # Конвертация Lua -> Python dict
             python_str = re.sub(r'\["(.*?)"\]\s*=', r'"\1":', data_string)
