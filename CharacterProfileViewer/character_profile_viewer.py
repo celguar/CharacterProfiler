@@ -10,22 +10,6 @@ LUA_PATTERN = 'CharacterProfiler*.lua'
 HTML_FILE = 'dashboard.html'
 ICON_BASE_PATH = 'assets/images/icons/large/'
 
-def get_profile_dict():
-    if not os.path.exists(LUA_FILE): return None
-    with open(LUA_FILE, 'r', encoding='utf-8') as f:
-        content = f.read()
-    try:
-        data_string = content.split('myProfile =')[1].strip()
-        python_str = re.sub(r'\["(.*?)"\]\s*=', r'"\1":', data_string)
-        python_str = re.sub(r'\[(\d+)\]\s*=', r'\1:', python_str)
-        python_str = python_str.replace('nil', 'None')
-        python_str = python_str.replace('true', 1)
-        python_str = python_str.replace('false', 0)
-        return ast.literal_eval(python_str)
-    except Exception as e:
-        print(f"Parsing error: {e}")
-        return None
-
 def process_files():
     # Находим все файлы по маске
     lua_files = glob.glob(LUA_PATTERN)
@@ -57,7 +41,9 @@ def process_files():
             # Конвертация Lua -> Python dict
             python_str = re.sub(r'\["(.*?)"\]\s*=', r'"\1":', data_string)
             python_str = re.sub(r'\[(\d+)\]\s*=', r'\1:', python_str)
-            python_str = python_str.replace('nil', 'None')
+            python_str = re.sub(r'\btrue\b', '1', python_str)
+            python_str = re.sub(r'\bfalse\b', '0', python_str)
+            python_str = re.sub(r'\bnil\b', 'None', python_str)
             
             profile_data = ast.literal_eval(python_str)
             
@@ -576,9 +562,5 @@ def generate_dashboard(myProfile, output_filename):
     final_html = html_template.replace('DATA_PLACEHOLDER', json_data).replace('ICON_PATH_PLACEHOLDER', ICON_BASE_PATH)
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(final_html)
-
-# profile = get_profile_dict()
-# if profile:
-#     generate_dashboard(profile)
 
 process_files()
