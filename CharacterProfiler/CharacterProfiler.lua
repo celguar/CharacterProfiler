@@ -30,7 +30,7 @@ local UnitResistName={"Holy","Fire","Nature","Frost","Shadow","Arcane"};
 local CPevents={"PLAYER_LOGIN","PLAYER_ENTERING_WORLD","PLAYER_LEVEL_UP","TIME_PLAYED_MSG",
 	"CRAFT_SHOW","CRAFT_CLOSE","CRAFT_UPDATE","SPELLS_CHANGED","TRADE_SKILL_SHOW","TRADE_SKILL_UPDATE","TRADE_SKILL_CLOSE",
 	"BANKFRAME_CLOSED","MAIL_SHOW","MAIL_INBOX_UPDATE","MAIL_CLOSED","MERCHANT_CLOSED","MINIMAP_ZONE_CHANGED","GOSSIP_SHOW","GOSSIP_CLOSED",
-	"PLAYER_CONTROL_LOST","PLAYER_CONTROL_GAINED","QUEST_FINISHED","PET_STABLE_CLOSED"};
+	"PLAYER_CONTROL_LOST","PLAYER_CONTROL_GAINED","QUEST_FINISHED","PET_STABLE_CLOSED","CHAT_MSG_ADDON"};
 local CPprefs={
 	enabled=true,tooltipshtml=true,reagenthtml=true,talentsfull=true,questsfull=false,lite=true,debug=false,honorold=true,ver=010500,
 	scan={inventory=true,talents=true,honor=true,reputation=true,spells=true,pet=true,equipment=true,mail=true,professions=true,skills=true,quests=true,bank=true}
@@ -91,6 +91,8 @@ function rpgoCP_EventHandler(event,arg1,arg2)
 		rpgoCP_InitPref();
 		rpgoCP_RegisterEvents();
 		rpgoCP_LoadVar();
+		SendChatMessage(".queststatus", "GUILD");
+		RequestTimePlayed();
 		this:UnregisterEvent("VARIABLES_LOADED");
 		return;
 	elseif(event=="PLAYER_LOGIN") then
@@ -171,6 +173,8 @@ function rpgoCP_EventHandler(event,arg1,arg2)
 			rpgoCP_GetQuests(force);
 		elseif(event=="PET_STABLE_CLOSED") then
 			rpgoCP_ScanPetStable();
+		elseif(event=="CHAT_MSG_ADDON") then
+			rpgoCP_Handle_Addon_Message(arg1, arg2)
 		end
 		rpgoCPstate["_lock"]=nil;
 	end
@@ -198,11 +202,13 @@ function rpgoCP_InitState(arg)
 		SpellBook={},
 		Professions={},
 		Reputation=0,
-		Quests=0, QuestsLog=0,
+		Quests=0, QuestsLog=0, QuestsCompleted=0,
 		Mail=nil, MailTime=0,
 		Honor=0,
 		Stable={},
 		Pets={}, PetSpell={},
+		AvailableTransmogs=0,
+		AvailableTitles=0
 	};
 end
 
@@ -406,6 +412,7 @@ function rpgoCP_Show()
 
 				msg="";
 				msg=msg .. "Quests:" ..rpgoCPstate["Quests"];
+				msg=msg .. "  Completed:" ..rpgoCPstate["QuestsCompleted"];
 				msg=msg .. "  Reputation: " ..rpgoCPstate["Reputation"];
 				if(rpgoCPstate["Honor"]~=0 and myProfile[rpgoCPserver][rpgoCPplayer]["Honor"]["RankName"]) then
 					msg=msg .. "  Honor: " ..myProfile[rpgoCPserver][rpgoCPplayer]["Honor"]["RankName"];
@@ -483,6 +490,23 @@ function rpgoCP_Show()
 				end
 				rpgo_VerboseMsg("  " .. msg);
 			end
+				msg="/Played: ";
+				if(rpgoCPstate["Played"]==-1) then
+					msg=msg..rpgo_ColorizeMsg(rpgoColorRed," not scanned")..".";
+				else
+					msg=msg.."scanned.";
+				end
+			rpgo_VerboseMsg("  " .. msg);
+			if(rpgoCPstate["AvailableTransmogs"] ~= 0) then
+				msg="Transmog available: ";
+				msg=msg..rpgoCPstate["AvailableTransmogs"];
+				rpgo_VerboseMsg("  " .. msg);
+			end
+			if(rpgoCPstate["AvailableTitles"] ~= 0) then
+				msg="Titles available: ";
+				msg=msg..rpgoCPstate["AvailableTitles"];
+				rpgo_VerboseMsg("  " .. msg);
+			end
 		else
 			rpgo_VerboseMsg(rpgo_ColorizeTitle(rpgoCP_PROVIDER,rpgoCP_ABBR)..": "..rpgo_ColorizeMsg(rpgoColorRed,"no character scanned"));
 		end
@@ -538,8 +562,13 @@ function rpgoCP_ForceExport()
 	rpgoCPstate["Pets"]=tmpState["Pets"];
 	rpgoCPstate["PetSpell"]=tmpState["PetSpell"];
 	rpgoCPstate["Mail"]=tmpState["Mail"];
+	rpgoCPstate["QuestsCompleted"]=tmpState["QuestsCompleted"];
+	rpgoCPstate["AvailableTransmogs"]=tmpState["AvailableTransmogs"];
+	rpgoCPstate["AvailableTitles"]=tmpState["AvailableTitles"];
 	rpgoCP_InitProfile();
 	rpgoCP_LoadProfile();
+	SendChatMessage(".queststatus", "GUILD");
+	RequestTimePlayed();
 	rpgoCP_UpdateProfile();
 	rpgoCP_ScanPetInfo();
 	rpgoCP_Show();
@@ -1765,6 +1794,103 @@ function rpgoCP_ScanBagInfo(bagindex,baglink,bagtexture,bagtooltip)
 	bagBlock["Tooltip"]=bagtooltip;
 	bagContainerText=itemType;
 	return bagBlock;
+end
+
+local function cp_strsplit(delimiter, subject)
+  if not subject then return nil end
+  local delimiter, fields = delimiter or ":", {}
+  local pattern = string.format("([^%s]+)", delimiter)
+  string.gsub(subject, pattern, function(c) fields[table.getn(fields)+1] = c end)
+  return unpack(fields)
+end
+
+local function cp_wipe_str(t)
+	if type(t) ~= "table" then
+		return {}
+	end
+	for i = getn(t), 1, -1 do
+		tremove(t, i)
+	end
+	for k in pairs(t) do
+		rawset(t, k, nil)
+	end
+	return t
+end
+
+local function cp_explode_str(str, delimiter, t)
+	local result = cp_wipe_str(t)
+	local from = 1
+	local delim_from, delim_to = strfind(str, delimiter, from, true)
+	while delim_from do
+		tinsert(result, strsub(str, from, delim_from - 1))
+		from = delim_to + 1
+		delim_from, delim_to = strfind(str, delimiter, from, true)
+	end
+	tinsert(result, strsub(str, from))
+	return result
+end
+
+function rpgoCP_Handle_Addon_Message(arg1, arg2)
+	if arg1 == "TWQUEST" then
+		for _, qid in pairs({cp_strsplit(" ", arg2)}) do
+			if not myProfile[rpgoCPserver][rpgoCPplayer]["QuestsCompleted"] then
+				myProfile[rpgoCPserver][rpgoCPplayer]["QuestsCompleted"]={};
+			end
+			myProfile[rpgoCPserver][rpgoCPplayer]["QuestsCompleted"][qid] = {};
+			myProfile[rpgoCPserver][rpgoCPplayer]["QuestsCompleted"][qid]["Completed"] = 1;
+			rpgoCPstate["QuestsCompleted"] = rpgoCPstate["QuestsCompleted"] + 1;
+			rpgo_VerboseMsg("Registered completed quest "..qid);
+		end
+	end
+	if arg1 == "TW_TRANSMOG" then
+		local message = arg2
+		if strfind(message, "AvailableTransmogs", 1, true) then
+			if not myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTransmogs"] then
+				myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTransmogs"]={};
+			end
+			local data = cp_explode_str(message, ":")
+			local InventorySlotId = tonumber(data[2])
+			if InventorySlotId and not myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTransmogs"][InventorySlotId] then
+				myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTransmogs"][InventorySlotId]={};
+			end
+			if data[4] == "start" then
+				-- rpgo_VerboseMsg("Xmog slot: "..InventorySlotId);
+			elseif data[4] == "end" then
+				-- Transmog:ShowAvailableTransmogs(InventorySlotId, true)
+			else
+				for i = 4, getn(data) do
+					local itemID = tonumber(data[i])
+					if itemID and itemID ~= 0 then
+						if not myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTransmogs"][InventorySlotId][i-3] then
+							myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTransmogs"][InventorySlotId][i-3] = {};
+						end
+						myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTransmogs"][InventorySlotId][i-3]["Item"] = itemID;
+						rpgoCPstate["AvailableTransmogs"] = rpgoCPstate["AvailableTransmogs"] + 1;
+					end
+				end
+			end
+		end
+	end
+	if arg1 == "TWT_TITLES" then
+		-- available titles
+		if strfind(arg2, "TW_AVAILABLE_TITLES:", 1, true) then
+			availableTitles = arg2
+			if not myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTitles"] then
+				myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTitles"]={};
+			end
+			for id, status in string.gfind(availableTitles, "(%d+):(%d+)") do
+				local checked = status == "1"
+				local title = id == "0" and GENERIC_NONE or getglobal("PVP_MEDAL" .. id)
+
+				if not myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTitles"][id] then
+					myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTitles"][id] = {};
+				end
+				myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTitles"][id]["Title"] = title;
+				myProfile[rpgoCPserver][rpgoCPplayer]["AvailableTitles"][id]["Checked"] = checked;
+				rpgoCPstate["AvailableTitles"] = rpgoCPstate["AvailableTitles"] + 1;
+			end
+		end
+	end
 end
 
 function rpgoCP_GetBagKey(bag)
