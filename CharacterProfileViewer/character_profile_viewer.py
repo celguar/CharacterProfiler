@@ -19,6 +19,8 @@ def get_profile_dict():
         python_str = re.sub(r'\["(.*?)"\]\s*=', r'"\1":', data_string)
         python_str = re.sub(r'\[(\d+)\]\s*=', r'\1:', python_str)
         python_str = python_str.replace('nil', 'None')
+        python_str = python_str.replace('true', 1)
+        python_str = python_str.replace('false', 0)
         return ast.literal_eval(python_str)
     except Exception as e:
         print(f"Parsing error: {e}")
@@ -295,7 +297,7 @@ def generate_dashboard(myProfile, output_filename):
                     if (val.Coin) val.Coin = formatMoney(val.Coin);
                     if (val.Item.Quantity === 0) val.Item = 'None';
                 }
-                if (val.Title && key.match(/^\d+$/))
+                if (val.Title && key.match(/^\d+$/) && sectionName !== "AvailableTitles")
                 { 
                     // Если ключ — это число (1, 2, 3), пробуем взять Title
                     let questDisplayName = val.Title || `Quest ${key}`;
@@ -444,6 +446,13 @@ def generate_dashboard(myProfile, output_filename):
                     let f = keys.find(k => k.toLowerCase() === slot.toLowerCase());
                     if (f) html += buildRow(f, data[f], sectionName);
                 });
+            } else if (sectionName === "QuestsCompleted") {
+                html = '<h2>' + sectionName + '</h2>';
+                html += '<details><summary>Open List</summary><table>';
+                keys.forEach(k => {
+                    html += buildRow(k, data[k], sectionName);
+                });
+                return html += '</table></details>';
             } else {
                 keys.forEach(k => {
                     if (sectionName === "Reputation" && k === "Count") return;
@@ -485,7 +494,7 @@ def generate_dashboard(myProfile, output_filename):
                         </div>`;
 
                     let out = header;
-                    const priority = ['Stats', 'Resists', 'Equipment', 'Inventory', 'Money', 'Bank', 'MailBox', 'Skills', 'SpellBook', 'Talents', 'Buffs', 'Professions', 'Pets', 'Reputation', 'Quests', 'Guild', 'Honor', 'Melee Attack', 'MailDateUTC'];
+                    const priority = ['Stats', 'Resists', 'Equipment', 'Inventory', 'Money', 'Bank', 'MailBox', 'Skills', 'SpellBook', 'Talents', 'Buffs', 'Professions', 'Pets', 'Reputation', 'Quests', 'QuestsCompleted', 'Guild', 'Honor', 'Melee Attack', 'MailDateUTC'];
                     priority.forEach(s => {
                         if(d[s]) {
 
