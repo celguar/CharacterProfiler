@@ -327,7 +327,7 @@ def generate_dashboard(myProfile, output_filename):
                                 rewardsHtml += renderProgressBar(itemName, `${currentStatus} / ${targetStatus}`, percent, barColor);
 
                             } else {
-                                rewardsHtml += `<p style="font-size: 0.9em; margin: 2px 0; color: #ccc;">• ${obj}</p>`;
+                                rewardsHtml += `<p style="font-size: 0.9em; margin: 2px 0; color: #ccc;">• ${task.Note}</p>`;
                             }
                         });
                         rewardsHtml += '</div>';
